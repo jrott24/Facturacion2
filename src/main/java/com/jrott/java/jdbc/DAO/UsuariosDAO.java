@@ -3,68 +3,96 @@ package com.jrott.java.jdbc.DAO;
 import com.jrott.java.jdbc.Usuarios;
 
 import java.sql.*;
-import java.util.Arrays;
-import java.util.List;
+
+import static com.jrott.java.jdbc.Main.idUsuario;
 
 public class UsuariosDAO {
+    static Connection connection;
 
-    private Connection connection;
-
-    public UsuariosDAO(Connection connection) throws SQLException {
-        // Conecta con la base de datos
-        this.connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/mi_base_de_datos", "root", "password");
-    }
-
-    public void close() throws SQLException {
-        // Cierra la conexión con la base de datos
-        this.connection.close();
-    }
-
-    public Usuarios findByUsername(String nombreUsuario) throws SQLException {
-        // Consulta a la base de datos para obtener el usuario
-        var sql = "SELECT * FROM usuarios WHERE nombreUsuario = ?";
-        ResultSet resultSet;
-        resultSet = this.ejecutarQuery(sql, nombreUsuario);
-
-        // Si el usuario no existe, devuelve null
-        if (!resultSet.next()) {
-            return null;
+    static {
+        try {
+            connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/facturacion", "root", "sasa");
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
         }
-
-        // Devuelve el usuario
-        var id = resultSet.getInt("id");
-        var nombre = resultSet.getString("nombre");
-        var apellido = resultSet.getString("apellido");
-        var username = resultSet.getString("username");
-        var contraseñaHash = resultSet.getBytes("contraseñaHash");
-        var rol = resultSet.getString("rol");
-
-        return new Usuarios(id, nombre, apellido, username, contraseñaHash, rol);
     }
 
-    private ResultSet ejecutarQuery(String sql, String nombreUsuario) throws SQLException {
-        // Crea una declaración preparada
-        var preparedStatement = this.connection.prepareStatement(sql);
-
-        // Establece el parámetro de la declaración preparada
-        preparedStatement.setString(1, nombreUsuario);
-
-        // Ejecuta la declaración preparada
-        return preparedStatement.executeQuery();
-    }
-    public void guardarAll(List<Usuarios> usuarios) throws SQLException {
-        String sql = "INSERT INTO usuarios (nombreUsuario, contraseña, rol) VALUES (?, ?, ?)";
+    @Transactional
+    public static void añadirUsuario(String nombre, String apellidos, String nombre_usuario, String contraseña, String tipoAcceso) throws SQLException {
+        String sql = "INSERT INTO usuarios (nombre, apellido, nombre_usuario, contraseña, tipo_acceso) VALUES (?, ?, ?, ?, ?)";
         PreparedStatement statement = connection.prepareStatement(sql);
+        statement.setString(1, nombre);
+        statement.setString(2, apellidos);
+        statement.setString(3, nombre_usuario);
+        statement.setString(4, contraseña);
+        statement.setString(5, tipoAcceso);
+        statement.executeUpdate();
+    }
 
-        for (Usuarios usuario : usuarios) {
-            statement.setString(1, usuario.getUsername());
-            statement.setString(2, Arrays.toString(usuario.getContraseñaHash()));
-            statement.setString(3, usuario.getRol());
-            statement.addBatch();
+    @Transactional
+    public static void eliminarUsuario(int idUsuario) throws SQLException {
+        String sql = "DELETE FROM usuarios WHERE id = ?";
+        PreparedStatement statement = connection.prepareStatement(sql);
+        statement.setInt(1, idUsuario);
+        statement.executeUpdate();
+    }
+
+    @Transactional
+    public static void modificarUsuario(int idUsuario, String nombre, String apellidos, String nombre_usuario, String contraseña, String tipoAcceso) throws SQLException {
+        String sql = "UPDATE usuarios SET nombre = ?, apellido = ?, nombre_usuario = ?, contraseña = ?, tipo_acceso = ? WHERE id = ?";
+        PreparedStatement statement = connection.prepareStatement(sql);
+        statement.setString(1, nombre);
+        statement.setString(2, apellidos);
+        statement.setString(3, nombre_usuario);
+        statement.setString(4, contraseña);
+        statement.setString(5, tipoAcceso);
+        statement.setInt(6, idUsuario);
+        statement.executeUpdate();
+    }
+
+    @Transactional
+    public static void buscarUsuarioPorId() throws SQLException {
+        String sql = "SELECT * FROM usuarios WHERE id = ?";
+        PreparedStatement statement = connection.prepareStatement(sql);
+        statement.setInt(1, idUsuario);
+        ResultSet resultSet = statement.executeQuery();
+
+        if (resultSet.next()) {
+            new Usuarios(
+                    resultSet.getInt("id"),
+                    resultSet.getString("nombre"),
+                    resultSet.getString("apellido"),
+                    resultSet.getString("nombre_usuario"),
+                    resultSet.getString("contraseña"),
+                    resultSet.getString("tipo_acceso")
+            );
+        } else {
         }
+    }
 
-        statement.executeBatch();
+    @Transactional
+    public static void listarUsuarios() throws SQLException {
+        String sql = "SELECT * FROM usuarios";
+        Statement statement = connection.createStatement();
+        ResultSet resultSet = statement.executeQuery(sql);
+
+        System.out.println("Listado de Usuarios:");
+        System.out.printf("%-20s %-20s %-20s %-20s%n", "Nombre", "Apellido", "Nombre de Usuario", "Tipo de Acceso");
+
+        while (resultSet.next()) {
+            String nombre = resultSet.getString("nombre");
+            String apellido = resultSet.getString("apellido");
+            String nombreUsuario = resultSet.getString("nombre_usuario");
+            String tipoAcceso = resultSet.getString("tipo_acceso");
+
+            // Validar si algún campo es null para reemplazarlo con "No disponible"
+            nombre = nombre != null ? nombre : "No disponible";
+            apellido = apellido != null ? apellido : "No disponible";
+            nombreUsuario = nombreUsuario != null ? nombreUsuario : "No disponible";
+            tipoAcceso = tipoAcceso != null ? tipoAcceso : "No disponible";
+
+            System.out.printf("%-20s %-20s %-20s %-20s%n", nombre, apellido, nombreUsuario, tipoAcceso);
+        }
     }
 
 }
-

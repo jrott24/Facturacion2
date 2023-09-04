@@ -1,20 +1,30 @@
 package com.jrott.java.jdbc;
 
-import java.util.Objects;
+import java.util.List;
 
 public class Producto {
-
     private int id;
-    private int codigoProducto;
-    private int cantidad;
-    private float precio;
+    private String nombre;
+    private String descripcion;
+    private double precio;
 
     public Producto() {
     }
 
-    public Producto(int codigoProducto, int cantidad) {
-        this.codigoProducto = codigoProducto;
-        this.cantidad = cantidad;
+    public Producto(int id, String nombre, String descripcion, double precio) {
+        this.id = id;
+        this.nombre = nombre;
+        this.descripcion = descripcion;
+        this.precio = precio;
+    }
+
+    public static Producto buscarProductoPorId(int id, List<Producto> productos) {
+        for (Producto producto : productos) {
+            if (producto.getId() == id) {
+                return producto;
+            }
+        }
+        return null; // Devuelve null si no se encuentra el producto
     }
 
     public int getId() {
@@ -25,57 +35,32 @@ public class Producto {
         this.id = id;
     }
 
-    public int getCodigoProducto() {
-        return codigoProducto;
+    public String getNombre() {
+        return nombre;
     }
 
-    public void setCodigoProducto(int codigoProducto) {
-        this.codigoProducto = codigoProducto;
+    public void setNombre(String nombre) {
+        this.nombre = nombre;
     }
 
-    public int getCantidad() {
-        return cantidad;
-    }
-
-    public void setCantidad(int cantidad) {
-        this.cantidad = cantidad;
-    }
-
-    public float getPrecio() {
+    public double getPrecio() {
         return precio;
     }
 
-    public void setPrecio(float precio) {
+    public void setPrecio(double precio) {
         this.precio = precio;
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-        Producto producto = (Producto) o;
-        return codigoProducto == producto.codigoProducto;
+    public String getDescripcion() {
+        return descripcion;
     }
 
-    @Override
-    public int hashCode() {
-        return Objects.hash(codigoProducto);
+    public void setDescripcion(String descripcion) {
+        this.descripcion = descripcion;
     }
 
     @Override
     public String toString() {
-        return "Producto{" +
-                "codigoProducto=" + codigoProducto +
-                ", cantidad=" + cantidad +
-                ", precio=" + precio +
-                '}';
-    }
-
-    public float getImporte() {
-        return precio * cantidad;
+        return nombre + '\'' + descripcion + '\'' + precio;
     }
 }

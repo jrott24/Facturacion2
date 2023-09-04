@@ -1,200 +1,399 @@
 package com.jrott.java.jdbc;
 
 import com.jrott.java.jdbc.DAO.FacturasDAO;
+import com.jrott.java.jdbc.DAO.ProductosDAO;
 import com.jrott.java.jdbc.DAO.UsuariosDAO;
-
-import java.io.IOException;
-import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.time.LocalDate;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
-
-import static java.util.Arrays.*;
+import static com.jrott.java.jdbc.DAO.ProductosDAO.*;
 
 public class Main {
 
-    private static final String URL = "jdbc:mysql://localhost:3306/tienda";
-    private static final String USUARIO = "root";
-    private static final String CONTRASEÑA = "";
-    Scanner scanner = new Scanner(System.in);
+    public static int idUsuario;
 
-    public Main() throws SQLException {
-    }
-
-    public static void main(String[] args) throws IOException, SQLException {
-        // Obtenemos la conexión a la base de datos
-        Connection connection = DriverManager.getConnection(URL, USUARIO, CONTRASEÑA);
-
-        // Declaramos un escáner para leer la entrada del usuario
+    public static void main(String[] args) throws Exception {
+        DriverManager.getConnection("jdbc:mysql://localhost:3306/facturacion", "root", "sasa");
         Scanner scanner = new Scanner(System.in);
+        String username;
+        String password;
+        String tipoAcceso;
 
-        // Solicitamos al usuario su nombre de usuario y contraseña
-        // Creamos una instancia de la clase AutenticarUsuarios
-        System.out.println("Introduce el nombre de usuario: ");
-        String nombreUsuario = scanner.nextLine();
-        System.out.println("Introduce la contraseña: ");
-        String contraseña = scanner.nextLine();
+        do {
+            System.out.println("Ingrese su nombre de usuario:");
+            username = scanner.nextLine();
 
-        // Autenticamos al usuario
-        AutenticarUsuarios autenticarUsuarios = new AutenticarUsuarios(connection);
-        boolean autenticado = autenticarUsuarios.autenticar(connection, nombreUsuario, contraseña);
+            System.out.println("Ingrese su contraseña:");
+            password = scanner.nextLine();
 
-        if (autenticado) {
-            // El usuario está autenticado
+            try {
+                tipoAcceso = LoginValidation.validateUser(username, password);
 
-            // Creamos una instancia de la clase Gestion
-            Gestion gestion = new Gestion(connection);
+                if (tipoAcceso != null) {
+                    System.out.println("Login exitoso. Tipo de acceso: " + tipoAcceso);
+                    showMainMenu(scanner, tipoAcceso); // Llamamos al método principal aquí si el login es exitoso
+                    break; // Salir del bucle
+                } else {
+                    System.out.println("Login incorrecto. Por favor, inténtelo de nuevo.");
+                }
+            } catch (Exception e) {
+                System.out.println("Se produjo un error al intentar el inicio de sesión. Mensaje de error: " + e.getMessage());
+            }
+        } while (true);
+    }
 
-            // Mostramos el menú de opciones
-            gestion.mostrarMenu();
-        } else {
-            // El usuario no está autenticado
 
-            System.out.println("El nombre de usuario o la contraseña son incorrectos");
+        public static void showMainMenu(Scanner scanner, String tipoAcceso) {
+        do {
+            System.out.println("Menú principal");
+            System.out.println("1. Usuarios");
+            System.out.println("2. Productos");
+            System.out.println("3. Facturas");
+            System.out.println("4. Salir");
+            String option = scanner.nextLine();
+            try {
+                switch (option) {
+                    case "1" -> {
+                        if ("admin".equals(tipoAcceso)) {
+                            mostrarMenuAdminUsuarios();
+                        } else {
+                            mostrarMenuCajeroUsuarios();
+                        }
+                    }
+                    case "2" -> {
+                        if ("admin".equals(tipoAcceso)) {
+                            mostrarMenuProductos();
+                        } else {
+                            System.out.println("Acceso denegado");
+                        }
+                    }
+                    case "3" -> mostrarMenuFacturas();
+                    case "4" -> System.exit(0);
+                    default -> System.out.println("Opción no válida");
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        } while (true);
+    }
+
+    public static void mostrarMenuCajeroUsuarios() throws SQLException {
+        Scanner scanner = new Scanner(System.in);
+        String opcion;
+        UsuariosDAO usuariosDAO = new UsuariosDAO();
+        do {
+            System.out.println("Menú de usuarios (Cajero)");
+            System.out.println("1. Listar usuarios");
+            System.out.println("2. Buscar usuario por id");
+            System.out.println("3. Salir");
+
+            opcion = scanner.nextLine();
+
+            switch (opcion) {
+                case "1":
+                    UsuariosDAO.listarUsuarios();
+                    break;
+                case "2":
+                    System.out.println("Introduce el ID del usuario:");
+                    int idUsuario = Integer.parseInt(scanner.nextLine());
+                    UsuariosDAO.buscarUsuarioPorId();
+                    break;
+                case "3":
+                    return;
+                default:
+                    System.out.println("Opción no válida");
+            }
+        } while (true);
+    }
+
+    public static void mostrarMenuCajeroProductos() throws SQLException {
+        Scanner scanner = new Scanner(System.in);
+        String opcion;
+        ProductosDAO productosDAO = new ProductosDAO();
+        // Mostramos el menú de productos para cajeros
+        do {
+            System.out.println("Menú de productos (Cajero)");
+            System.out.println("1. Listar productos");
+            System.out.println("2. Buscar producto por id");
+            System.out.println("3. Salir");
+            opcion = scanner.nextLine();
+            switch (opcion) {
+                case "1" -> ProductosDAO.listarProductos();
+                case "2" -> {
+                    System.out.println("Introduce el ID del producto:");
+                    int idProducto = Integer.parseInt(scanner.nextLine());
+                    ProductosDAO.buscarProductoPorId(idProducto);
+                }
+                case "3" -> {
+                    return;
+                }
+                default -> System.out.println("Opción no válida");
+            }
+        } while (true);
+    }
+
+    public static void mostrarMenuAdminUsuarios() {
+        Scanner scanner = new Scanner(System.in);
+        String opcion;
+        try {
+            do {
+                System.out.println("Menú de administración de usuarios");
+                System.out.println("1. Listar usuarios");
+                System.out.println("2. Buscar usuario por id");
+                System.out.println("3. Añadir usuario");
+                System.out.println("4. Modificar usuario");
+                System.out.println("5. Eliminar usuario");
+                System.out.println("6. Salir");
+                opcion = scanner.nextLine();
+                switch (opcion) {
+                    case "1":
+                        UsuariosDAO.listarUsuarios();
+                        break;
+                    case "2":
+                        System.out.print("Introduce el id del usuario a buscar: ");
+                        int idBuscar = Integer.parseInt(scanner.nextLine());
+                        UsuariosDAO.buscarUsuarioPorId();
+                        break;
+                    case "3":
+                        // Obtener los datos del usuario a añadir y añadirlo
+                        System.out.println("Introduce los datos del usuario a añadir:");
+                        String nombre = getInput("Nombre: ", scanner);
+                        String apellidos = getInput("Apellidos: ", scanner);
+                        String nombre_usuario = getInput("Usuario: ", scanner);
+                        String contrasena = getInput("Contraseña: ", scanner);
+                        String tipoAcceso = getInput("Tipo de acceso (admin o cajero): ", scanner);
+                        UsuariosDAO.añadirUsuario(nombre, apellidos, nombre_usuario, contrasena, tipoAcceso);
+                        break;
+                    case "4":
+                        // Similarmente para modificar un usuario
+                        int idModificar = Integer.parseInt(getInput("Introduce el id del usuario a modificar: ", scanner));
+                        nombre = getInput("Nombre (vacío para no modificar): ", scanner);
+                        apellidos = getInput("Apellidos (vacío para no modificar): ", scanner);
+                        nombre_usuario = getInput("Usuario (vacío para no modificar): ", scanner);
+                        contrasena = getInput("Contraseña (vacío para no modificar): ", scanner);
+                        tipoAcceso = getInput("Tipo de acceso (vacío para no modificar): ", scanner);
+                        UsuariosDAO.modificarUsuario(idModificar, nombre, apellidos, nombre_usuario, contrasena, tipoAcceso);
+                        break;
+                    case "5":
+                        int idEliminar = Integer.parseInt(getInput("Introduce el id del usuario a eliminar: ", scanner));
+                        UsuariosDAO.eliminarUsuario(idEliminar);
+                        break;
+                    case "6":
+                        return;
+                    default:
+                        System.out.println("Opción no válida");
+                }
+            } while (true);
+        } catch (SQLException e) {
+            System.out.println("Error en la base de datos: " + e.getMessage());
+        } catch (NumberFormatException e) {
+            System.out.println("Debe ingresar un número válido");
         }
-        // Cerramos la conexión a la base de datos
-        connection.close();
     }
 
+    private static String getInput(String prompt, Scanner scanner) {
+        System.out.print(prompt);
+        return scanner.nextLine();
+    }
 
-    public void mostrarMenu() throws SQLException {
-        System.out.println("¿Qué deseas hacer?");
-        System.out.println("1. Añadir usuario");
-        System.out.println("2. Modificar usuario");
-        System.out.println("3. Eliminar usuario");
-        System.out.println("4. Listar usuarios");
+    public static void mostrarMenuProductos() throws SQLException {
+        Scanner scanner = new Scanner(System.in);
+        String opcion;
+        do {
+            System.out.println("\nMenú de administración de productos");
+            System.out.println("1. Listar productos");
+            System.out.println("2. Buscar producto por ID");
+            System.out.println("3. Añadir producto");
+            System.out.println("4. Modificar producto");
+            System.out.println("5. Eliminar producto");
+            System.out.println("6. Salir");
+            System.out.print("Seleccione una opción: ");
+            opcion = scanner.nextLine();
+            switch (opcion) {
+                case "1" -> ProductosDAO.listarProductos(); // Asumiendo que este método está implementado
+                case "2" -> {
+                    System.out.print("Introduce el ID del producto a buscar: ");
+                    int idBuscar = Integer.parseInt(scanner.nextLine());
+                    ProductosDAO.buscarProductoPorId(idBuscar); // Asumiendo que este método está implementado
+                }
+                case "3" -> {
+                    System.out.print("Introduce los datos del producto a añadir (nombre, descripción, precio): ");
+                    String nombre = scanner.nextLine();
+                    String descripcion = scanner.nextLine();
+                    double precio = Double.parseDouble(scanner.nextLine());
+                    añadirProductoNuevo(nombre, descripcion, precio);
+                }
+                case "4" -> {
+                    System.out.print("Introduce el ID del producto a modificar: ");
+                    int idModificar = Integer.parseInt(scanner.nextLine());
+                    System.out.print("Introduce los nuevos datos del producto (nombre, descripción, precio): ");
+                    String nuevoNombre = scanner.nextLine();
+                    String nuevaDescripcion = scanner.nextLine();
+                    double nuevoPrecio = Double.parseDouble(scanner.nextLine());
+                    modificarProductoExistente(idModificar, nuevoNombre, nuevaDescripcion, nuevoPrecio);
+                }
+                case "5" -> {
+                    System.out.print("Introduce el ID del producto a eliminar: ");
+                    int idEliminar = Integer.parseInt(scanner.nextLine());
+                    eliminarProductoExistente(idEliminar);
+                }
+                case "6" -> {
+                    return;
+                }
+                default -> System.out.println("Opción no válida");
+            }
+        } while (true);
+    }
 
-        int opcion = Integer.parseInt(System.console().readLine());
+    public static void mostrarMenuFacturas() throws SQLException {
+        Scanner scanner = new Scanner(System.in);
+        String opcion;
+        do {
+            System.out.println("\nMenú de administración de facturas");
+            System.out.println("1. Listar facturas");
+            System.out.println("2. Buscar factura por id");
+            System.out.println("3. Crear factura");
+            System.out.println("4. Editar factura");
+            System.out.println("5. Eliminar factura");
+            System.out.println("6. Salir");
+            System.out.print("Seleccione una opción: ");
+            opcion = scanner.nextLine();
+            switch (opcion) {
+                case "1" -> FacturasDAO.listarFacturas();
+                case "2" -> {
+                    System.out.print("Introduce el id de la factura a buscar: ");
+                    int idBuscar = Integer.parseInt(scanner.nextLine());
+                    FacturasDAO.buscarFacturaPorId(idBuscar);
+                }
+                case "3" -> {
+                    System.out.print("Introduce la fecha (yyyy-mm-dd): ");
+                    String fecha = scanner.nextLine();
+                    int idCliente = -1;
+                    do {
+                        System.out.print("Introduce el id del cliente: ");
+                        try {
+                            idCliente = Integer.parseInt(scanner.nextLine());
+                            break;
+                        } catch (NumberFormatException e) {
+                            System.out.println("Por favor, introduce un número válido para el id del cliente.");
+                        }
+                    } while (true);
+                    int idUsuario = -1;
+                    do {
+                        System.out.print("Introduce el id del usuario: ");
+                        try {
+                            idUsuario = Integer.parseInt(scanner.nextLine());
+                            break;
+                        } catch (NumberFormatException e) {
+                            System.out.println("Por favor, introduce un número válido para el id del usuario.");
+                        }
+                    } while (true);
+                    double total = -1;
+                    do {
+                        System.out.print("Introduce el total de la factura: ");
+                        try {
+                            total = Double.parseDouble(scanner.nextLine());
+                            break;
+                        } catch (NumberFormatException e) {
+                            System.out.println("Por favor, introduce un número válido para el total de la factura.");
+                        }
+                    } while (true);
+                    FacturasDAO.crearFactura(fecha, idCliente, idUsuario, total);
+                }
+                case "4" -> {
+                    System.out.print("Introduce el id de la factura a editar: ");
+                    int idEditar = Integer.parseInt(scanner.nextLine());
+                    System.out.print("Introduce la nueva fecha (yyyy-mm-dd): ");
+                    String nuevaFecha = scanner.nextLine();
+                    System.out.print("Introduce el nuevo id del cliente: ");
+                    int nuevoIdCliente = Integer.parseInt(scanner.nextLine());
+                    System.out.print("Introduce el nuevo id del usuario: ");
+                    int nuevoIdUsuario = Integer.parseInt(scanner.nextLine());
+                    System.out.print("Introduce el nuevo total de la factura: ");
+                    double nuevoTotal = Double.parseDouble(scanner.nextLine());
+                    FacturasDAO.modificarFactura(idEditar, nuevoIdUsuario, nuevoIdCliente, java.sql.Date.valueOf(nuevaFecha), nuevoTotal);
+                }
+                case "5" -> {
+                    System.out.print("Introduce el id de la factura a eliminar: ");
+                    int idEliminar = Integer.parseInt(scanner.nextLine());
+                    FacturasDAO.eliminarFactura(idEliminar);
+                }
+                case "6" -> {
+                    return;
+                }
+                default -> System.out.println("Opción no válida");
+            }
+        } while (true);
+    }
 
-        switch (opcion) {
-            case 1:
-                añadirUsuario();
-                break;
-            case 2:
-                modificarUsuario();
-                break;
-            case 3:
-                eliminarUsuario();
-                break;
-            case 4:
-                listarUsuarios();
-                break;
-            default:
-                System.out.println("Opción no válida");
+    public static void mostrarFactura(String fecha, Cliente cliente, Map<Producto, Integer> productos, double total, String usuario) {
+        System.out.println("------- Factura -------");
+        System.out.println("Fecha: " + fecha);
+        System.out.println("Cliente: " + cliente.getNombre() + " " + cliente.getApellido());
+        System.out.println("Usuario: " + usuario);
+        System.out.println("\nProductos:");
+        for (Map.Entry<Producto, Integer> entry : productos.entrySet()) {
+            System.out.println(entry.getKey().getNombre() + " - " + entry.getValue() + " unidades - $" + entry.getKey().getPrecio());
         }
+        System.out.println("\nTotal: $" + total);
+        System.out.println("----------------------");
     }
 
-    public void añadirUsuario() throws SQLException {
-        // Solicitamos al usuario el nombre de usuario y la contraseña
-        System.out.println("Introduce el nombre de usuario: ");
-        String nombreUsuario = scanner.nextLine();
-        System.out.println("Introduce la contraseña: ");
-        String contraseña = scanner.nextLine();
-        System.out.println("Introduce el rol: ");
-        UserRole rol = UserRole.valueOf(scanner.nextLine());
-
-        // Comprobamos si el usuario está autenticado
-        boolean autenticado = AutenticarUsuarios.autenticar(connection, nombreUsuario, contraseña);
-
-        // Si el usuario no está autenticado, no se permite añadir usuarios
-        if (!autenticado) {
-            System.out.println("No estás autorizado para añadir usuarios");
-            return;
+    public static class MainApp {
+        public static void main(String[] args) {
+            Scanner scanner = new Scanner(System.in);
+            String opcion;
+            do {
+                System.out.println("\n---- Menú principal ----");
+                System.out.println("1. Crear nueva factura");
+                System.out.println("2. Mostrar todas las facturas");
+                System.out.println("3. Buscar factura por ID");
+                System.out.println("4. Editar factura");
+                System.out.println("5. Eliminar factura");
+                System.out.println("6. Salir");
+                System.out.print("Seleccione una opción: ");
+                opcion = scanner.nextLine();
+                switch (opcion) {
+                    case "1" -> {
+                        try {
+                            Facturacion.crearNuevaFactura();
+                        } catch (SQLException e) {
+                            System.out.println("Error al crear la factura: " + e.getMessage());
+                        }
+                    }
+                    case "2" ->
+                        // Supongo que hay un método que haga esto en Facturacion
+                            Facturacion.mostrarTodasLasFacturas();
+                    case "3" -> {
+                        System.out.print("Introduce el ID de la factura: ");
+                        int idBuscar = Integer.parseInt(scanner.nextLine());
+                        Facturacion.buscarFacturaPorId(idBuscar);
+                    }
+                    case "4" -> {
+                        // Supongo que hay un método que haga esto en Facturacion
+                        System.out.print("Introduce el ID de la factura a editar: ");
+                        int idEditar = Integer.parseInt(scanner.nextLine());
+                        Facturacion.editarFactura(idEditar);
+                    }
+                    case "5" -> {
+                        // Supongo que hay un método que haga esto en Facturacion
+                        System.out.print("Introduce el ID de la factura a eliminar: ");
+                        int idEliminar = Integer.parseInt(scanner.nextLine());
+                        Facturacion.eliminarFactura(idEliminar);
+                    }
+                    case "6" -> {
+                        System.out.println("Saliendo...");
+                        return;
+                    }
+                    default -> System.out.println("Opción no válida");
+                }
+            } while (true);
         }
-
-        // Añadimos el usuario a la base de datos
-        PreparedStatement statement = connection.prepareStatement(
-                "INSERT INTO usuarios (nombreUsuario, contraseña, rol) VALUES (?, ?, ?)");
-        statement.setString(1, nombreUsuario);
-        statement.setString(2, contraseña);
-        statement.setString(3, rol.toString());
-        statement.execute();
-
-        System.out.println("Usuario añadido correctamente");
-    }
-
-
-    // Añadimos los métodos necesarios
-    Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/mydb", "root", "password");
-
-    // Creamos las instancias de las DAO
-    UsuariosDAO usuariosDAO = new MySQLUsuariosDAO(connection);
-    UserRoleDAO userRoleDAO = new MySQLUserRoleDAO(connection);
-    static FacturasDAO facturasDAO = new MySQLFacturasDAO(connection);
-
-    // Realizamos algunas operaciones
-    List<Usuarios> usuarios = asList(
-            new Usuarios("usuario1", "contraseña1", "cliente"),
-            new Usuarios("usuario2", "contraseña2", "empleado")
-    );
-        usuariosDAO.saveAll(usuarios);
-
-    List<UserRole> userRoles = asList(
-            new UserRole("usuario1", "cliente"),
-            new UserRole("usuario2", "empleado")
-    );
-        userRoleDAO.saveAll(userRoles);
-
-    List<Factura> facturas = asList(
-            new Factura(1, LocalDate.now(), "Cliente 1", asList("Producto 1", "Producto 2")),
-            new Factura(2, LocalDate.now(), "Empleado 1", asList("Producto 3", "Producto 4"))
-    );
-        facturasDAO.saveAll(facturas);
-
-
-    private static void generarReporteFacturasDia(Connection connection) throws SQLException {
-        // Obtenemos las facturas del día
-        List<Factura> facturasDia = facturasDAO.findByFecha(LocalDate.now());
-
-        // Imprimimos el reporte
-        System.out.println("Facturas del día:");
-        facturasDia.forEach(System.out::println);
-    }
-
-    // Añadimos los métodos necesarios para la compatibilidad con las clases mencionadas
-
-    public static void gestionarProductos(Connection connection) throws SQLException {
-        // Creamos una instancia de Gestion
-        Gestion gestion = new Gestion(connection);
-
-        // Mostramos el menú de opciones de productos
-        gestion.gestionarProductos();
-    }
-
-    public static void gestionarUsuarios(Connection connection) throws SQLException {
-        // Creamos una instancia de Gestion
-        Gestion gestion = new Gestion(connection);
-
-        // Mostramos el menú de opciones de usuarios
-        gestion.gestionarUsuarios();
-    }
-
-    public static void listarFacturas(Connection connection) throws SQLException {
-        // Creamos una instancia de ReporteFacturas
-        ReporteFacturas reporteFacturas = new ReporteFacturas();
-
-        // Generamos el reporte de todas las facturas
-        reporteFacturas.listarFacturas(connection);
-    }
-
-    public static void listarFacturasPorRol(UserRole role, Connection connection) throws SQLException {
-        // Creamos una instancia de ReporteFacturas
-        ReporteFacturas reporteFacturas = new ReporteFacturas();
-
-        // Generamos el reporte de las facturas del rol especificado
-        reporteFacturas.listarFacturasPorRol(role, connection);
-    }
-
-    public static void listarFacturasPorFecha(Date fechaInicial, Date fechaFinal, Connection connection) throws SQLException {
-        // Creamos una instancia de ReporteFacturas
-        ReporteFacturas reporteFacturas = new ReporteFacturas();
-
-        // Generamos el reporte de las facturas de las fechas especificadas
-        reporteFacturas.listarFacturasPorFecha(fechaInicial, fechaFinal, connection);
     }
 }
+
+
+
+
+

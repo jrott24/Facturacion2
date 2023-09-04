@@ -1,86 +1,96 @@
 package com.jrott.java.jdbc.DAO;
 
+import com.jrott.java.jdbc.Cliente;
 import com.jrott.java.jdbc.Factura;
 
 import java.sql.*;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
-public abstract class FacturasDAO {
 
-    private Connection connection;
+public class FacturasDAO {
 
-    public FacturasDAO(Connection connection) {
-        this.connection = connection;
+    private static Connection connection() throws SQLException {
+        String url = "jdbc:mysql://localhost:3306/facturacion";
+        String user = "root";
+        String password = "sasa";
+        return DriverManager.getConnection(url, user, password);
     }
 
-    protected abstract String getTablaFacturas();
+    public static List<Factura> listarFacturas() {
+        String sql = "SELECT * FROM facturas";
 
-    protected abstract String getIdColumna();
+        try (Connection connection = connection();
+             Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery(sql)) {
 
-    protected abstract String getFechaFacturaColumna();
+            List<Factura> facturas = new ArrayList<>();
 
-    protected abstract String getNombreClienteColumna();
+            while (resultSet.next()) {
+                Factura factura = new Factura();
+                factura.setId(resultSet.getInt("id"));
+                factura.setFecha(resultSet.getString("fecha"));
+                factura.setCliente((Cliente) resultSet.getObject("cliente"));
+                factura.setUsuario(resultSet.getString("usuario"));
+                factura.setTotal(resultSet.getDouble("total"));
 
-    protected abstract String getProductosColumna();
+                facturas.add(factura);
+            }
 
-    public void save(Factura factura) throws SQLException {
-        PreparedStatement statement = connection.prepareStatement("INSERT INTO " + getTablaFacturas() + " (" + getIdColumna() + ", " + getFechaFacturaColumna() + ", " + getNombreClienteColumna() + ", " + getProductosColumna() + ") VALUES (?, ?, ?, ?)");
-        statement.setInt(1, factura.getId());
-        statement.setDate(2, new Date(factura.getFechaFactura().getTime()));
-        statement.setString(3, factura.getNombreCliente());
-        statement.setString(4, factura.getProductos().toString());
-        statement.executeUpdate();
+
+            for (Factura factura : facturas) {
+                System.out.println(factura);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
-    public Factura findById(int id) throws SQLException {
-        PreparedStatement statement = connection.prepareStatement("SELECT * FROM " + getTablaFacturas() + " WHERE " + getIdColumna() + " = ?");
-        statement.setInt(1, id);
-        ResultSet resultSet = statement.executeQuery();
-        if (resultSet.next()) {
-            return new Factura(
-                    resultSet.getInt(getIdColumna()),
-                    resultSet.getDate(getFechaFacturaColumna()),
-                    resultSet.getString(getNombreClienteColumna()),
-                    resultSet.getString(getProductosColumna()).replaceAll("[\\[\\]]", "").split(", ")
-            );
-        } else {
-            return null;
+    public static void buscarFacturaPorId(int idFactura) throws SQLException {
+        String sql = "SELECT * FROM facturas WHERE id = ?";
+        try (Connection connection = connection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, idFactura);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                }
+            }
         }
     }
 
-    public List<Factura> findAll() throws SQLException {
-        PreparedStatement statement = connection.prepareStatement("SELECT * FROM " + getTablaFacturas());
-        ResultSet resultSet = statement.executeQuery();
-        List<Factura> facturas = new ArrayList<>();
-        while (resultSet.next()) {
-            facturas.add(new Factura(
-                    resultSet.getInt(getIdColumna()),
-                    resultSet.getDate(getFechaFacturaColumna()),
-                    resultSet.getString(getNombreClienteColumna()),
-                    resultSet.getString(getProductosColumna()).replaceAll("[\\[\\]]", "").split(", ")
-            ));
+    public static void crearFactura(String fecha, int idCliente, int idUsuario, double total) throws SQLException {
+        String sql = "INSERT INTO facturas (fecha, cliente, usuario, total) VALUES (?, ?, ?, ?)";
+        try (Connection connection = connection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, fecha);
+            statement.setInt(2, idCliente);
+            statement.setInt(3, idUsuario);
+            statement.setDouble(4, total);
+            statement.executeUpdate();
         }
-        return facturas;
     }
 
-    public void update(Factura factura) throws SQLException {
-        PreparedStatement statement = connection.prepareStatement("UPDATE " + getTablaFacturas() + " SET " + getFechaFacturaColumna() + " = ?, " + getNombreClienteColumna() + " = ?, " + getProductosColumna() + " = ? WHERE " + getIdColumna() + " = ?");
-        statement.setDate(1, new Date(factura.getFechaFactura().getTime()));
-        statement.setString(2, factura.getNombreCliente());
-        statement.setString(3, factura.getProductos().toString());
-        statement.setInt(4, factura.getId());
-        statement.executeUpdate();
+    public static void modificarFactura(int idFactura, int idUsuario, int idCliente, Date fecha, double total) throws SQLException {
+        String sql = "UPDATE facturas SET fecha = ?, cliente_id = ?, usuario = ?, total = ? WHERE id = ?";
+        try (Connection connection = connection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, String.valueOf(fecha));
+            statement.setInt(2, idCliente);
+            statement.setInt(3, idUsuario);
+            statement.setDouble(4, total);
+            statement.setInt(5, idFactura);
+            statement.executeUpdate();
+        }
     }
 
-    public void delete(int id) throws SQLException {
-        PreparedStatement statement = connection.prepareStatement("DELETE FROM " + getTablaFacturas() + " WHERE " + getIdColumna() + " = ?");
-        statement.setInt(1, id);
-        statement.executeUpdate();
+    public static void eliminarFactura(int idFactura) throws SQLException {
+        String sql = "DELETE FROM facturas WHERE id = ?";
+        try (Connection connection = connection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, idFactura);
+            statement.executeUpdate();
+        }
     }
-
-
-    public abstract List<Factura> findByFecha(LocalDate now);
 }

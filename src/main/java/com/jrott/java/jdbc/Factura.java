@@ -1,26 +1,16 @@
 package com.jrott.java.jdbc;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import java.sql.Connection;
+import java.util.Map;
 
 public class Factura {
-
+    private static Connection connection;
     private int id;
-    private int numeroFactura;
-    private Date fechaFactura;
-    private String nombreCliente;
-    private List<Producto> productos;
+    private String fecha;
+    private Cliente cliente;
+    private Map<Producto, Integer> productos;
     private double total;
-
-    public Factura(int anInt, String date, String string, List<Producto> split) {
-        this.productos = new ArrayList<>();
-        this.id = id;
-        this.numeroFactura = numeroFactura;
-        this.fechaFactura = fechaFactura;
-        this.nombreCliente = nombreCliente;
-        this.productos = productos;
-    }
+    private String usuario;
 
     public int getId() {
         return id;
@@ -30,43 +20,31 @@ public class Factura {
         this.id = id;
     }
 
-    public int getNumeroFactura() {
-        return numeroFactura;
+    public String getFecha() {
+        return fecha;
     }
 
-    public void setNumeroFactura(int numeroFactura) {
-        this.numeroFactura = numeroFactura;
+    public void setFecha(String fecha) {
+        this.fecha = fecha;
     }
 
-    public Date getFechaFactura() {
-        return fechaFactura;
+    public Cliente getCliente() {
+        return cliente;
     }
 
-    public void setFechaFactura(Date fechaFactura) {
-        this.fechaFactura = fechaFactura;
+    public void setCliente(Cliente cliente) {
+        this.cliente = cliente;
     }
 
-    public String getNombreCliente() {
-        return nombreCliente;
-    }
-
-    public void setNombreCliente(String nombreCliente) {
-        this.nombreCliente = nombreCliente;
-    }
-
-    public List<Producto> getProductos() {
+    public Map<Producto, Integer> getProductos() {
         return productos;
     }
 
-    public void setProductos(List<Producto> productos) {
+    public void setProductos(Map<Producto, Integer> productos) {
         this.productos = productos;
     }
 
     public double getTotal() {
-        int total = 0;
-        for (Producto producto : productos) {
-            total += (int) (producto.getPrecio() * producto.getCantidad());
-        }
         return total;
     }
 
@@ -74,15 +52,25 @@ public class Factura {
         this.total = total;
     }
 
+    public String getUsuario() {
+        return usuario;
+    }
+
+    public void setUsuario(String usuario) {
+        this.usuario = usuario;
+    }
+
     @Override
     public String toString() {
         return "Factura{" +
                 "id=" + id +
-                ", numeroFactura=" + numeroFactura +
-                ", fechaFactura=" + fechaFactura +
-                ", nombreCliente='" + nombreCliente + '\'' +
-                ", productos=" + productos +
+                ", fecha='" + fecha + '\'' +
+                ", cliente='" + cliente + '\'' +
+                ", usuario='" + usuario + '\'' +
+                ", total=" + total +
                 '}';
     }
+
 }
+
 
